@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo nhân viên mới - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Tạo nhân viên mới</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employees.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-plus me-2"></i>Thông tin nhân viên
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="employeeForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee_id" class="form-label">Mã nhân viên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">Họ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Tên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Số điện thoại</label>
+                            <input type="tel" class="form-control" id="phone" name="phone">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="hire_date" class="form-label">Ngày vào làm <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="hire_date" name="hire_date" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="department" class="form-label">Phòng ban <span class="text-danger">*</span></label>
+                            <select class="form-select" id="department" name="department" required>
+                                <option value="">Chọn phòng ban</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.name }}">{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="position" class="form-label">Vị trí <span class="text-danger">*</span></label>
+                            <select class="form-select" id="position" name="position" required>
+                                <option value="">Chọn vị trí</option>
+                                {% for pos in positions %}
+                                <option value="{{ pos.title }}" data-salary="{{ pos.base_salary }}" data-description="{{ pos.description }}">
+                                    {{ pos.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted" id="positionDescription"></small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="salary" class="form-label">Lương cơ bản (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="salary" name="salary" min="0" step="100000" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="allowance" class="form-label">Phụ cấp (VNĐ)</label>
+                            <input type="number" class="form-control" id="allowance" name="allowance" min="0" step="100000" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Địa chỉ</label>
+                        <textarea class="form-control" id="address" name="address" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="history.back()">
+                            <i class="fas fa-times me-1"></i>Hủy
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Tạo nhân viên
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Hướng dẫn
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-lightbulb me-1"></i>Lưu ý:</h6>
+                    <ul class="mb-0">
+                        <li>Mã nhân viên phải là duy nhất</li>
+                        <li>Email phải hợp lệ và chưa được sử dụng</li>
+                        <li>Lương cơ bản tính theo VNĐ</li>
+                        <li>Phụ cấp có thể để trống (mặc định 0)</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle me-1"></i>Quan trọng:</h6>
+                    <p class="mb-0">Sau khi tạo, nhân viên sẽ được kích hoạt tự động và có thể sử dụng hệ thống chấm công.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set current date as default hire date
+    var today = new Date().toISOString().split('T')[0];
+    $('#hire_date').val(today);
+    
+    // Position selection handler
+    $('#position').change(function() {
+        var selectedOption = $(this).find('option:selected');
+        var salary = selectedOption.data('salary');
+        var description = selectedOption.data('description');
+        
+        // Update salary field with base salary
+        if (salary) {
+            $('#salary').val(salary);
+        }
+        
+        // Show position description
+        if (description) {
+            $('#positionDescription').text(description);
+        } else {
+            $('#positionDescription').text('');
+        }
+    });
+    
+    // Form validation
+    $('#employeeForm').on('submit', function(e) {
+        var isValid = true;
+        
+        // Check required fields
+        $(this).find('[required]').each(function() {
+            if (!$(this).val()) {
+                $(this).addClass('is-invalid');
+                isValid = false;
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        // Check email format
+        var email = $('#email').val();
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (email && !emailRegex.test(email)) {
+            $('#email').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        // Check phone format (optional)
+        var phone = $('#phone').val();
+        if (phone) {
+            var phoneRegex = /^[0-9+\-\s()]+$/;
+            if (!phoneRegex.test(phone)) {
+                $('#phone').addClass('is-invalid');
+                isValid = false;
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Vui lòng kiểm tra lại thông tin nhập vào!');
+        }
+    });
+    
+    // Remove validation error on input
+    $('input, select').on('input change', function() {
+        $(this).removeClass('is-invalid');
+    });
+});
+</script>
+{% endblock %}

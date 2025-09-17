@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Chấm công - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Quản lý Chấm công</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('attendance.manual_entry') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>Nhập chấm công
+            </a>
+            <a href="{{ url_for('attendance.report') }}" class="btn btn-sm btn-info">
+                <i class="fas fa-chart-bar me-1"></i>Báo cáo
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Chấm công vào</h5>
+                <p class="card-text">Ghi nhận giờ vào làm việc</p>
+                <button class="btn btn-success" onclick="checkIn()">
+                    <i class="fas fa-sign-in-alt me-1"></i>Check In
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Chấm công ra</h5>
+                <p class="card-text">Ghi nhận giờ ra về</p>
+                <button class="btn btn-warning" onclick="checkOut()">
+                    <i class="fas fa-sign-out-alt me-1"></i>Check Out
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Hôm nay</h5>
+                <p class="card-text">{{ today_attendance|default(0) }} nhân viên</p>
+                <span class="badge bg-primary">{{ today_date }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tháng này</h5>
+                <p class="card-text">{{ monthly_attendance|default(0) }} ngày công</p>
+                <span class="badge bg-info">{{ current_month }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter and Search -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <input type="date" class="form-control" id="dateFilter" value="{{ today_date }}">
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="employeeFilter">
+            <option value="">Tất cả nhân viên</option>
+            {% for employee in employees %}
+            <option value="{{ employee.id }}">{{ employee.first_name }} {{ employee.last_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="statusFilter">
+            <option value="">Tất cả trạng thái</option>
+            <option value="present">Có mặt</option>
+            <option value="absent">Vắng mặt</option>
+            <option value="late">Đi muộn</option>
+            <option value="half-day">Nửa ngày</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-primary w-100" onclick="filterAttendance()">
+            <i class="fas fa-filter me-1"></i>Lọc
+        </button>
+    </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Nhân viên</th>
+                        <th>Giờ vào</th>
+                        <th>Giờ ra</th>
+                        <th>Tổng giờ</th>
+                        <th>Giờ OT</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in attendances %}
+                    <tr>
+                        <td>{{ attendance.date.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ attendance.employee.first_name }} {{ attendance.employee.last_name }}</td>
+                        <td>{{ attendance.check_in.strftime('%H:%M') if attendance.check_in else 'N/A' }}</td>
+                        <td>{{ attendance.check_out.strftime('%H:%M') if attendance.check_out else 'N/A' }}</td>
+                        <td>{{ "%.1f"|format(attendance.total_hours) if attendance.total_hours else '0.0' }}h</td>
+                        <td>{{ "%.1f"|format(attendance.overtime_hours) if attendance.overtime_hours else '0.0' }}h</td>
+                        <td>
+                            {% if attendance.status == 'present' %}
+                            <span class="badge bg-success">Có mặt</span>
+                            {% elif attendance.status == 'absent' %}
+                            <span class="badge bg-danger">Vắng mặt</span>
+                            {% elif attendance.status == 'late' %}
+                            <span class="badge bg-warning">Đi muộn</span>
+                            {% elif attendance.status == 'half-day' %}
+                            <span class="badge bg-info">Nửa ngày</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ attendance.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ attendance.notes or 'N/A' }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('attendance.edit', id=attendance.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="deleteAttendance({{ attendance.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set today's date as default
+    var today = new Date().toISOString().split('T')[0];
+    $('#dateFilter').val(today);
+});
+
+function checkIn() {
+    // This would typically open a modal or redirect to check-in page
+    alert('Chức năng chấm công vào sẽ được triển khai');
+}
+
+function checkOut() {
+    // This would typically open a modal or redirect to check-out page
+    alert('Chức năng chấm công ra sẽ được triển khai');
+}
+
+function filterAttendance() {
+    var date = $('#dateFilter').val();
+    var employee = $('#employeeFilter').val();
+    var status = $('#statusFilter').val();
+    
+    // Redirect with filter parameters
+    var url = '{{ url_for("attendance.index") }}?';
+    if (date) url += 'date=' + date + '&';
+    if (employee) url += 'employee=' + employee + '&';
+    if (status) url += 'status=' + status + '&';
+    
+    window.location.href = url;
+}
+
+function deleteAttendance(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa bản ghi chấm công này?')) {
+        fetch(`/attendance/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then ((data) => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Có lỗi xảy ra: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi xóa bản ghi chấm công');
+        });
+    }
+}
+</script>
+{% endblock %}

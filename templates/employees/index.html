@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Nhân viên - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Quản lý Nhân viên</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('employees.create') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>Thêm nhân viên
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="input-group">
+            <input type="text" class="form-control" id="searchInput" placeholder="Tìm kiếm nhân viên...">
+            <button class="btn btn-outline-secondary" type="button" id="searchBtn">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <select class="form-select" id="departmentFilter">
+            <option value="">Tất cả phòng ban</option>
+            <option value="Kỹ thuật">Kỹ thuật</option>
+            <option value="Nhân sự">Nhân sự</option>
+            <option value="Kinh doanh">Kinh doanh</option>
+            <option value="Tài chính">Tài chính</option>
+            <option value="Vận hành">Vận hành</option>
+        </select>
+    </div>
+</div>
+
+<!-- Employees Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="employeesTable">
+                <thead>
+                    <tr>
+                        <th>Mã NV</th>
+                        <th>Họ và tên</th>
+                        <th>Email</th>
+                        <th>Điện thoại</th>
+                        <th>Vị trí</th>
+                        <th>Phòng ban</th>
+                        <th>Lương cơ bản</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>{{ employee.employee_id }}</td>
+                        <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                        <td>{{ employee.email }}</td>
+                        <td>{{ employee.phone or 'N/A' }}</td>
+                        <td>{{ employee.position.title if employee.position else '' }}</td>
+                        <td>{{ employee.department.name if employee.department else '' }}</td>
+                        <td>{{ "{:,}".format(employee.salary) }} ₫</td>
+                        <td>
+                            {% if employee.is_active %}
+                            <span class="badge bg-success">Đang làm việc</span>
+                            {% else %}
+                            <span class="badge bg-danger">Đã nghỉ</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('employees.show', id=employee.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('employees.edit', id=employee.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="deleteEmployee({{ employee.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Search functionality
+    $('#searchBtn').click(function() {
+        filterEmployees();
+    });
+    
+    $('#searchInput').keyup(function() {
+        filterEmployees();
+    });
+    
+    $('#departmentFilter').change(function() {
+        filterEmployees();
+    });
+    
+    function filterEmployees() {
+        var searchTerm = $('#searchInput').val().toLowerCase();
+        var department = $('#departmentFilter').val();
+        
+        $('#employeesTable tbody tr').each(function() {
+            var row = $(this);
+            var name = row.find('td:eq(1)').text().toLowerCase();
+            var email = row.find('td:eq(2)').text().toLowerCase();
+            var empId = row.find('td:eq(0)').text().toLowerCase();
+            var dept = row.find('td:eq(5)').text();
+            
+            var matchesSearch = name.includes(searchTerm) || email.includes(searchTerm) || empId.includes(searchTerm);
+            var matchesDept = !department || dept === department;
+            
+            if (matchesSearch && matchesDept) {
+                row.show();
+            } else {
+                row.hide();
+            }
+        });
+    }
+});
+
+function deleteEmployee(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa nhân viên này?')) {
+        // Thử sử dụng DELETE API trước, nếu không được thì dùng POST form
+        fetch(`/employees/${id}/delete`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                // Nếu DELETE không được, dùng POST form
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/employees/' + id + '/delete';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        })
+        .catch(error => {
+            // Nếu có lỗi, dùng POST form
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/employees/' + id + '/delete';
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+}
+</script>
+{% endblock %}

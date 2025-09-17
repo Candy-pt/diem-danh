@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}Báo cáo Tổng hợp Tháng {{ month }}/{{ year }} - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Báo cáo Tổng hợp Tháng {{ month }}/{{ year }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('reports.export_excel') }}" class="btn btn-sm btn-success">
+                <i class="fas fa-file-excel me-1"></i>Xuất Excel
+            </a>
+            <a href="{{ url_for('reports.export_pdf') }}" class="btn btn-sm btn-danger">
+                <i class="fas fa-file-pdf me-1"></i>Xuất PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Executive Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Nhân viên</h5>
+                <p class="card-text text-primary fw-bold">{{ employees|length }}</p>
+                <small class="text-muted">Tổng số</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Ngày công</h5>
+                <p class="card-text text-success fw-bold">{{ attendances|length }}</p>
+                <small class="text-muted">Bản ghi chấm công</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tổng lương</h5>
+                <p class="card-text text-warning fw-bold">{{ "{:,}".format(payrolls|map(attribute='net_salary')|sum) }} ₫</p>
+                <small class="text-muted">Thực lãnh</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Thanh toán</h5>
+                <p class="card-text text-info fw-bold">{{ "{:,}".format(payments|map(attribute='amount')|sum) }} ₫</p>
+                <small class="text-muted">Đã thanh toán</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Department Overview -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-building me-2"></i>Tổng quan theo phòng ban
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Phòng ban</th>
+                                <th>Số NV</th>
+                                <th>Tổng lương</th>
+                                <th>TB/NV</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set dept_stats = {} %}
+                            {% for emp in employees %}
+                                {% if emp.department not in dept_stats %}
+                                    {% set _ = dept_stats.update({emp.department: {'count': 0, 'total_salary': 0}}) %}
+                                {% endif %}
+                                {% set _ = dept_stats[emp.department].update({'count': dept_stats[emp.department].count + 1}) %}
+                                {% set _ = dept_stats[emp.department].update({'total_salary': dept_stats[emp.department].total_salary + emp.salary}) %}
+                            {% endfor %}
+                            
+                            {% for dept, stats in dept_stats.items() %}
+                            <tr>
+                                <td>{{ dept }}</td>
+                                <td>{{ stats.count }}</td>
+                                <td>{{ "{:,}".format(stats.total_salary) }} ₫</td>
+                                <td>{{ "{:,}".format(stats.total_salary // stats.count) }} ₫</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Phân bố nhân viên
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="deptChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Summary -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-clock me-2"></i>Tổng quan chấm công
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ attendances|length }}</h4>
+                        <small class="text-muted">Bản ghi</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ "%.1f"|format(attendances|map(attribute='total_hours')|sum) }}</h4>
+                        <small class="text-muted">Tổng giờ</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ "%.1f"|format(attendances|map(attribute='overtime_hours')|sum) }}</h4>
+                        <small class="text-muted">Giờ OT</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ "%.1f"|format(attendances|length / (employees|length or 1)) }}</h4>
+                        <small class="text-muted">TB bản ghi/NV</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Xu hướng chấm công
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Summary -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Tổng quan tài chính
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-success">{{ "{:,}".format(payrolls|map(attribute='net_salary')|sum) }} ₫</h4>
+                        <small class="text-muted">Tổng lương</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ "{:,}".format(payrolls|map(attribute='allowances')|sum) }} ₫</h4>
+                        <small class="text-muted">Tổng phụ cấp</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ "{:,}".format(payrolls|map(attribute='overtime_pay')|sum) }} ₫</h4>
+                        <small class="text-muted">Tổng OT</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-danger">{{ "{:,}".format(payrolls|map(attribute='deductions')|sum) }} ₫</h4>
+                        <small class="text-muted">Tổng khấu trừ</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>So sánh lương vs thanh toán
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="financialChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Tables -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>Danh sách nhân viên
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="max-height: 300px;">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Mã NV</th>
+                                <th>Họ tên</th>
+                                <th>Phòng ban</th>
+                                <th>Lương cơ bản</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emp in employees[:10] %}
+                            <tr>
+                                <td>{{ emp.employee_id }}</td>
+                                <td>{{ emp.first_name }} {{ emp.last_name }}</td>
+                                <td>{{ emp.department }}</td>
+                                <td>{{ "{:,}".format(emp.salary) }} ₫</td>
+                            </tr>
+                            {% endfor %}
+                            {% if employees|length > 10 %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    <small>... và {{ employees|length - 10 }} nhân viên khác</small>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Thanh toán gần đây
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="max-height: 300px;">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Mã GD</th>
+                                <th>Nhân viên</th>
+                                <th>Số tiền</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments[:10] %}
+                            <tr>
+                                <td>{{ payment.payment_id }}</td>
+                                <td>{{ payment.employee.first_name }} {{ payment.employee.last_name }}</td>
+                                <td>{{ "{:,}".format(payment.amount) }} ₫</td>
+                                <td>
+                                    {% if payment.status == 'completed' %}
+                                    <span class="badge bg-success">Hoàn thành</span>
+                                    {% elif payment.status == 'pending' %}
+                                    <span class="badge bg-warning">Chờ xử lý</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ payment.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if payments|length > 10 %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    <small>... và {{ payments|length - 10 }} giao dịch khác</small>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    initializeCharts();
+});
+
+function initializeCharts() {
+    // Department Distribution Chart
+    var deptCtx = document.getElementById('deptChart').getContext('2d');
+    var deptData = {
+        labels: [{% for dept, stats in dept_stats.items() %}'{{ dept }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for dept, stats in dept_stats.items() %}{{ stats.count }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            ]
+        }]
+    };
+    
+    var deptChart = new Chart(deptCtx, {
+        type: 'doughnut',
+        data: deptData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Attendance Trend Chart
+    var attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+    var attendanceData = {
+        labels: [{% for attendance in attendances %}'{{ attendance.date.strftime('%d/%m') }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Giờ làm việc',
+            data: [{% for attendance in attendances %}{{ attendance.total_hours or 0 }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            borderColor: '#36A2EB',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            tension: 0.4
+        }]
+    };
+    
+    var attendanceChart = new Chart(attendanceCtx, {
+        type: 'line',
+        data: attendanceData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Financial Comparison Chart
+    var financialCtx = document.getElementById('financialChart').getContext('2d');
+    var financialData = {
+        labels: ['Lương', 'Thanh toán'],
+        datasets: [{
+            data: [
+                {{ payrolls|map(attribute='net_salary')|sum }},
+                {{ payments|map(attribute='amount')|sum }}
+            ],
+            backgroundColor: [
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 99, 132, 0.8)'
+            ],
+            borderColor: [
+                '#36A2EB',
+                '#FF6384'
+            ],
+            borderWidth: 1
+        }]
+    };
+    
+    var financialChart = new Chart(financialCtx, {
+        type: 'bar',
+        data: financialData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

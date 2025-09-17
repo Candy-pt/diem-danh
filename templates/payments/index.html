@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Thanh toán - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Quản lý Thanh toán</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('payments.create') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>Tạo thanh toán
+            </a>
+            <a href="{{ url_for('payments.bulk_payment') }}" class="btn btn-sm btn-success">
+                <i class="fas fa-money-bill-wave me-1"></i>Thanh toán hàng loạt
+            </a>
+            <a href="{{ url_for('payments.report') }}" class="btn btn-sm btn-info">
+                <i class="fas fa-chart-bar me-1"></i>Báo cáo
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tổng thanh toán tháng</h5>
+                <p class="card-text text-primary fw-bold">{{ "{:,}".format(total_monthly_payments|default(0)) }} ₫</p>
+                <span class="badge bg-primary">{{ current_month }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Đã thanh toán</h5>
+                <p class="card-text text-success fw-bold">{{ paid_count|default(0) }} giao dịch</p>
+                <span class="badge bg-success">Hoàn thành</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Chờ xử lý</h5>
+                <p class="card-text text-warning fw-bold">{{ pending_count|default(0) }} giao dịch</p>
+                <span class="badge bg-warning">Đang chờ</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Thất bại</h5>
+                <p class="card-text text-danger fw-bold">{{ failed_count|default(0) }} giao dịch</p>
+                <span class="badge bg-danger">Cần xử lý</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter and Search -->
+<div class="row mb-3">
+    <div class="col-md-2">
+        <select class="form-select" id="monthFilter">
+            <option value="01">Tháng 1</option>
+            <option value="02">Tháng 2</option>
+            <option value="03">Tháng 3</option>
+            <option value="04">Tháng 4</option>
+            <option value="05">Tháng 5</option>
+            <option value="06">Tháng 6</option>
+            <option value="07">Tháng 7</option>
+            <option value="08">Tháng 8</option>
+            <option value="09">Tháng 9</option>
+            <option value="10">Tháng 10</option>
+            <option value="11">Tháng 11</option>
+            <option value="12">Tháng 12</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="yearFilter">
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="statusFilter">
+            <option value="">Tất cả trạng thái</option>
+            <option value="completed">Hoàn thành</option>
+            <option value="pending">Chờ xử lý</option>
+            <option value="failed">Thất bại</option>
+            <option value="cancelled">Đã hủy</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="methodFilter">
+            <option value="">Tất cả phương thức</option>
+            <option value="bank_transfer">Chuyển khoản</option>
+            <option value="cash">Tiền mặt</option>
+            <option value="check">Séc</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input type="text" class="form-control" id="searchInput" placeholder="Tìm kiếm...">
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-primary w-100" onclick="filterPayments()">
+            <i class="fas fa-filter me-1"></i>Lọc
+        </button>
+    </div>
+</div>
+
+<!-- Payments Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="paymentsTable">
+                <thead>
+                    <tr>
+                        <th>Mã GD</th>
+                        <th>Nhân viên</th>
+                        <th>Tháng/Năm</th>
+                        <th>Số tiền</th>
+                        <th>Phương thức</th>
+                        <th>Ngày thanh toán</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                                                 <td>{{ payment.id }}</td>
+                         <td>{{ payment.employee.first_name }} {{ payment.employee.last_name }}</td>
+                         <td>{{ payment.payroll.month }}/{{ payment.payroll.year }}</td>
+                        <td class="fw-bold text-primary">{{ "{:,}".format(payment.amount) }} ₫</td>
+                        <td>
+                            {% if payment.payment_method == 'bank_transfer' %}
+                            <span class="badge bg-info">Chuyển khoản</span>
+                            {% elif payment.payment_method == 'cash' %}
+                            <span class="badge bg-success">Tiền mặt</span>
+                            {% elif payment.payment_method == 'check' %}
+                            <span class="badge bg-warning">Séc</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ payment.payment_method }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ payment.payment_date.strftime('%d/%m/%Y') if payment.payment_date else 'N/A' }}</td>
+                        <td>
+                            {% if payment.status == 'completed' %}
+                            <span class="badge bg-success">Hoàn thành</span>
+                            {% elif payment.status == 'pending' %}
+                            <span class="badge bg-warning">Chờ xử lý</span>
+                            {% elif payment.status == 'failed' %}
+                            <span class="badge bg-danger">Thất bại</span>
+                            {% elif payment.status == 'cancelled' %}
+                            <span class="badge bg-secondary">Đã hủy</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ payment.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ payment.notes or 'N/A' }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('payments.show', id=payment.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('payments.edit', id=payment.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if payment.status == 'pending' %}
+                                <form method="POST" action="{{ url_for('payments.mark_as_paid', id=payment.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Đánh dấu thanh toán này đã hoàn thành?')">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-danger" onclick="deletePayment({{ payment.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set current month and year as default
+    var now = new Date();
+    var currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    var currentYear = now.getFullYear();
+    
+    $('#monthFilter').val(currentMonth);
+    $('#yearFilter').val(currentYear);
+    
+    // Search functionality
+    $('#searchInput').keyup(function() {
+        filterPayments();
+    });
+});
+
+function filterPayments() {
+    var month = $('#monthFilter').val();
+    var year = $('#yearFilter').val();
+    var status = $('#statusFilter').val();
+    var method = $('#methodFilter').val();
+    var search = $('#searchInput').val().toLowerCase();
+    
+    $('#paymentsTable tbody tr').each(function() {
+        var row = $(this);
+        var monthYear = row.find('td:eq(2)').text().toLowerCase();
+        var employee = row.find('td:eq(1)').text().toLowerCase();
+        var amount = row.find('td:eq(3)').text().toLowerCase();
+        var paymentMethod = row.find('td:eq(4)').text().toLowerCase();
+        var statusText = row.find('td:eq(6)').text().toLowerCase();
+        
+        var matchesMonth = !month || monthYear.includes(month + '/' + year);
+        var matchesStatus = !status || statusText.includes(status);
+        var matchesMethod = !method || paymentMethod.includes(method);
+        var matchesSearch = !search || employee.includes(search) || amount.includes(search);
+        
+        if (matchesMonth && matchesStatus && matchesMethod && matchesSearch) {
+            row.show();
+        } else {
+            row.hide();
+        }
+    });
+}
+
+function markAsPaid(id) {
+    if (confirm('Bạn có chắc chắn muốn đánh dấu thanh toán này là đã hoàn thành?')) {
+        fetch(`/payments/${id}/mark-paid`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Có lỗi xảy ra: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi cập nhật trạng thái thanh toán');
+        });
+    }
+}
+
+function deletePayment(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa thanh toán này?')) {
+        fetch(`/payments/${id}/delete`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Có lỗi xảy ra: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi xóa thanh toán');
+        });
+    }
+}
+</script>
+{% endblock %}
+
+

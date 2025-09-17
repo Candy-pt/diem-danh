@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Chỉnh sửa {{ employee.first_name }} {{ employee.last_name }} - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Chỉnh sửa thông tin nhân viên</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employees.show', id=employee.id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-edit me-2"></i>Chỉnh sửa thông tin
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="editEmployeeForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee_id" class="form-label">Mã nhân viên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="employee_id" name="employee_id" value="{{ employee.employee_id }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">Họ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ employee.first_name }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Tên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ employee.last_name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ employee.email }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Số điện thoại</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ employee.phone or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="hire_date" class="form-label">Ngày vào làm <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="hire_date" name="hire_date" 
+                                   value="{{ employee.hire_date.strftime('%Y-%m-%d') if employee.hire_date else '' }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="department" class="form-label">Phòng ban <span class="text-danger">*</span></label>
+                            <select class="form-select" id="department" name="department" required>
+                                <option value="">Chọn phòng ban</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if employee.department_id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="position" class="form-label">Vị trí <span class="text-danger">*</span></label>
+                            <select class="form-select" id="position" name="position" required>
+                                <option value="">Chọn vị trí</option>
+                                {% for pos in positions %}
+                                <option value="{{ pos.id }}" 
+                                        data-salary="{{ pos.base_salary }}" 
+                                        data-description="{{ pos.description }}"
+                                        {% if employee.position_id == pos.id %}selected{% endif %}>
+                                    {{ pos.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted" id="positionDescription"></small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="salary" class="form-label">Lương cơ bản (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="salary" name="salary" 
+                                   value="{{ employee.salary }}" min="0" step="100000" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="allowance" class="form-label">Phụ cấp (VNĐ)</label>
+                            <input type="number" class="form-control" id="allowance" name="allowance" 
+                                   value="{{ employee.allowance or 0 }}" min="0" step="100000">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Địa chỉ</label>
+                        <textarea class="form-control" id="address" name="address" rows="3">{{ employee.address or '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                   {% if employee.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                Nhân viên đang làm việc
+                            </label>
+                        </div>
+                        <small class="text-muted">Bỏ chọn nếu nhân viên đã nghỉ việc</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="history.back()">
+                            <i class="fas fa-times me-1"></i>Hủy
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Cập nhật
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Current Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Thông tin hiện tại
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="fw-bold">Mã nhân viên:</label>
+                    <p class="mb-1">{{ employee.employee_id }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Họ và tên:</label>
+                    <p class="mb-1">{{ employee.first_name }} {{ employee.last_name }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Email:</label>
+                    <p class="mb-1">{{ employee.email }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Phòng ban:</label>
+                    <p class="mb-1">
+                        <span class="badge bg-primary">{{ employee.department.name }}</span>
+                    </p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Vị trí:</label>
+                    <p class="mb-1">
+                        <span class="badge bg-info">{{ employee.position.title }}</span>
+                    </p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Lương cơ bản:</label>
+                    <p class="mb-1 text-primary fw-bold">{{ "{:,}".format(employee.salary) }} ₫</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Phụ cấp:</label>
+                    <p class="mb-1 text-success">{{ "{:,}".format(employee.allowance or 0) }} ₫</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Tổng thu nhập:</label>
+                    <p class="mb-1 text-warning fw-bold">{{ "{:,}".format(employee.salary + (employee.allowance or 0)) }} ₫</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Update History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Lịch sử cập nhật
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="fw-bold">Ngày vào làm:</label>
+                    <p class="mb-1">{{ employee.hire_date.strftime('%d/%m/%Y') if employee.hire_date else 'N/A' }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Cập nhật gần nhất:</label>
+                    <p class="mb-1">
+                        {% if employee.updated_at %}
+                        {{ employee.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                        Chưa cập nhật
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Trạng thái:</label>
+                    <p class="mb-1">
+                        {% if employee.is_active %}
+                        <span class="badge bg-success">Đang làm việc</span>
+                        {% else %}
+                        <span class="badge bg-danger">Đã nghỉ</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Position selection handler
+    $('#position').change(function() {
+        var selectedOption = $(this).find('option:selected');
+        var salary = selectedOption.data('salary');
+        var description = selectedOption.data('description');
+        
+        // Update salary field with base salary (only if user hasn't modified it)
+        if (salary && !$('#salary').data('user-modified')) {
+            $('#salary').val(salary);
+        }
+        
+        // Show position description
+        if (description) {
+            $('#positionDescription').text(description);
+        } else {
+            $('#positionDescription').text('');
+        }
+    });
+    
+    // Show description for current position on page load
+    var currentPosition = $('#position option:selected');
+    if (currentPosition.length && currentPosition.val()) {
+        var description = currentPosition.data('description');
+        if (description) {
+            $('#positionDescription').text(description);
+        }
+    }
+    
+    // Mark salary as user-modified when user changes it
+    $('#salary').on('input', function() {
+        $(this).data('user-modified', true);
+    });
+    
+    // Form validation
+    $('#editEmployeeForm').on('submit', function(e) {
+        var isValid = true;
+        
+        // Check required fields
+        $(this).find('[required]').each(function() {
+            if (!$(this).val()) {
+                $(this).addClass('is-invalid');
+                isValid = false;
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        // Check email format
+        var email = $('#email').val();
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (email && !emailRegex.test(email)) {
+            $('#email').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        // Check phone format (optional)
+        var phone = $('#phone').val();
+        if (phone) {
+            var phoneRegex = /^[0-9+\-\s()]+$/;
+            if (!phoneRegex.test(phone)) {
+                $('#phone').addClass('is-invalid');
+                isValid = false;
+            }
+        }
+        
+        // Check salary
+        var salary = parseFloat($('#salary').val());
+        if (salary < 0) {
+            $('#salary').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Vui lòng kiểm tra lại thông tin nhập vào!');
+        }
+    });
+    
+    // Remove validation error on input
+    $('input, select, textarea').on('input change', function() {
+        $(this).removeClass('is-invalid');
+    });
+    
+    // Handle is_active checkbox
+    $('#is_active').on('change', function() {
+        if (!$(this).is(':checked')) {
+            if (!confirm('Bạn có chắc chắn muốn đánh dấu nhân viên này đã nghỉ việc?')) {
+                $(this).prop('checked', true);
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

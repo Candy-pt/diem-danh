@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Báo cáo - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Báo cáo & Thống kê</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('reports.export_excel') }}" class="btn btn-sm btn-success">
+                <i class="fas fa-file-excel me-1"></i>Xuất Excel
+            </a>
+            <a href="{{ url_for('reports.export_pdf') }}" class="btn btn-sm btn-danger">
+                <i class="fas fa-file-pdf me-1"></i>Xuất PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Report Selection -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Báo cáo Nhân sự</h5>
+                <p class="card-text">Thống kê nhân viên, phòng ban, vị trí</p>
+                <a href="{{ url_for('reports.employee_report') }}" class="btn btn-primary">Xem báo cáo</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-clock fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Báo cáo Chấm công</h5>
+                <p class="card-text">Thống kê giờ làm việc, vắng mặt, OT</p>
+                <a href="{{ url_for('reports.attendance_report') }}" class="btn btn-success">Xem báo cáo</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-calculator fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">Báo cáo Lương</h5>
+                <p class="card-text">Thống kê lương, phụ cấp, khấu trừ</p>
+                <a href="{{ url_for('reports.payroll_report') }}" class="btn btn-warning">Xem báo cáo</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-money-bill-wave fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Báo cáo Tài chính</h5>
+                <p class="card-text">Thống kê thanh toán, chi phí nhân sự</p>
+                <a href="{{ url_for('reports.financial_report') }}" class="btn btn-info">Xem báo cáo</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Thống kê theo tháng
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Tháng:</label>
+                        <select class="form-select" id="monthSelect">
+                            <option value="01">Tháng 1</option>
+                            <option value="02">Tháng 2</option>
+                            <option value="03">Tháng 3</option>
+                            <option value="04">Tháng 4</option>
+                            <option value="05">Tháng 5</option>
+                            <option value="06">Tháng 6</option>
+                            <option value="07">Tháng 7</option>
+                            <option value="08">Tháng 8</option>
+                            <option value="09">Tháng 9</option>
+                            <option value="10">Tháng 10</option>
+                            <option value="11">Tháng 11</option>
+                            <option value="12">Tháng 12</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Năm:</label>
+                        <select class="form-select" id="yearSelect">
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary mt-3 w-100" onclick="generateMonthlyReport()">
+                    <i class="fas fa-sync-alt me-1"></i>Tạo báo cáo
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Thống kê nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ total_employees|default(0) }}</h4>
+                        <small class="text-muted">Tổng nhân viên</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ active_employees|default(0) }}</h4>
+                        <small class="text-muted">Đang làm việc</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ total_departments|default(0) }}</h4>
+                        <small class="text-muted">Phòng ban</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ avg_salary|default(0) }}</h4>
+                        <small class="text-muted">Lương TB (triệu)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Department Distribution Chart -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Phân bố nhân viên theo phòng ban
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="departmentChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Xu hướng lương theo tháng
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="salaryTrendChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-history me-2"></i>Hoạt động gần đây
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Thời gian</th>
+                        <th>Hoạt động</th>
+                        <th>Người thực hiện</th>
+                        <th>Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in recent_activities %}
+                    <tr>
+                        <td>{{ activity.timestamp.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ activity.action }}</td>
+                        <td>{{ activity.user.username if activity.user else 'System' }}</td>
+                        <td>{{ activity.details }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // Set current month and year as default
+    var now = new Date();
+    var currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    var currentYear = now.getFullYear();
+    
+    $('#monthSelect').val(currentMonth);
+    $('#yearSelect').val(currentYear);
+    
+    // Initialize charts
+    initializeCharts();
+});
+
+function generateMonthlyReport() {
+    var month = $('#monthSelect').val();
+    var year = $('#yearSelect').val();
+    
+    // Show loading
+    alert('Đang tạo báo cáo cho tháng ' + month + '/' + year + '...');
+    
+    // Redirect to monthly report
+    window.location.href = '{{ url_for("reports.monthly_report") }}?month=' + month + '&year=' + year;
+}
+
+function initializeCharts() {
+    // Department Distribution Chart
+    var deptCtx = document.getElementById('departmentChart').getContext('2d');
+    var deptChart = new Chart(deptCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Kỹ thuật', 'Nhân sự', 'Kinh doanh', 'Tài chính', 'Vận hành'],
+            datasets: [{
+                data: [12, 8, 15, 6, 10],
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Salary Trend Chart
+    var salaryCtx = document.getElementById('salaryTrendChart').getContext('2d');
+    var salaryChart = new Chart(salaryCtx, {
+        type: 'line',
+        data: {
+            labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
+            datasets: [{
+                label: 'Lương trung bình (triệu)',
+                data: [15.2, 15.5, 15.8, 16.1, 16.3, 16.6, 16.9, 17.2, 17.5, 17.8, 18.1, 18.4],
+                borderColor: '#36A2EB',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

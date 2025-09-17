@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Chỉnh sửa bảng lương - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Chỉnh sửa bảng lương</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('payroll.show', id=payroll.id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-edit me-2"></i>Chỉnh sửa thông tin lương
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="editPayrollForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="basic_salary" class="form-label">Lương cơ bản (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="basic_salary" name="basic_salary" 
+                                   value="{{ payroll.basic_salary }}" min="0" step="1000" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="allowance" class="form-label">Phụ cấp (VNĐ)</label>
+                            <input type="number" class="form-control" id="allowance" name="allowance" 
+                                   value="{{ payroll.allowance }}" min="0" step="1000">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="overtime_pay" class="form-label">Lương làm thêm (VNĐ)</label>
+                            <input type="number" class="form-control" id="overtime_pay" name="overtime_pay" 
+                                   value="{{ payroll.overtime_pay }}" min="0" step="1000">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="bonus" class="form-label">Thưởng (VNĐ)</label>
+                            <input type="number" class="form-control" id="bonus" name="bonus" 
+                                   value="{{ payroll.bonus }}" min="0" step="1000">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="deductions" class="form-label">Khấu trừ (VNĐ)</label>
+                            <input type="number" class="form-control" id="deductions" name="deductions" 
+                                   value="{{ payroll.deductions }}" min="0" step="1000">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="total_salary" class="form-label">Tổng lương (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="total_salary" name="total_salary" 
+                                   value="{{ payroll.total_salary }}" min="0" step="1000" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Trạng thái</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="pending" {% if payroll.status == 'pending' %}selected{% endif %}>Chờ xử lý</option>
+                                <option value="approved" {% if payroll.status == 'approved' %}selected{% endif %}>Đã duyệt</option>
+                                <option value="paid" {% if payroll.status == 'paid' %}selected{% endif %}>Đã thanh toán</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="history.back()">
+                            <i class="fas fa-times me-1"></i>Hủy
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Cập nhật
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Current Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Thông tin hiện tại
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="fw-bold">Nhân viên:</label>
+                    <p class="mb-1">{{ payroll.employee.first_name }} {{ payroll.employee.last_name }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Mã nhân viên:</label>
+                    <p class="mb-1">{{ payroll.employee.employee_id }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Tháng/Năm:</label>
+                    <p class="mb-1">{{ payroll.month }}/{{ payroll.year }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Ngày làm việc:</label>
+                    <p class="mb-1">{{ payroll.working_days }} ngày</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Giờ làm thêm:</label>
+                    <p class="mb-1">{{ "%.1f"|format(payroll.overtime_hours) }} giờ</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Trạng thái hiện tại:</label>
+                    <p class="mb-1">
+                        {% if payroll.status == 'pending' %}
+                        <span class="badge bg-warning">Chờ xử lý</span>
+                        {% elif payroll.status == 'approved' %}
+                        <span class="badge bg-info">Đã duyệt</span>
+                        {% elif payroll.status == 'paid' %}
+                        <span class="badge bg-success">Đã thanh toán</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ payroll.status }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auto Calculation -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calculator me-2"></i>Tính toán tự động
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-lightbulb me-1"></i>Lưu ý:</h6>
+                    <p class="mb-0">Tổng lương sẽ được tính tự động: Lương cơ bản + Phụ cấp + Lương làm thêm + Thưởng - Khấu trừ</p>
+                </div>
+                
+                <button type="button" class="btn btn-outline-primary w-100" onclick="calculateTotal()">
+                    <i class="fas fa-calculator me-1"></i>Tính lại tổng lương
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto calculate total when any field changes
+    $('#basic_salary, #allowance, #overtime_pay, #bonus, #deductions').on('input', function() {
+        calculateTotal();
+    });
+    
+    // Form validation
+    $('#editPayrollForm').on('submit', function(e) {
+        var basicSalary = parseFloat($('#basic_salary').val()) || 0;
+        var totalSalary = parseFloat($('#total_salary').val()) || 0;
+        
+        if (basicSalary < 0) {
+            alert('Lương cơ bản không được âm!');
+            e.preventDefault();
+            return;
+        }
+        
+        if (totalSalary < 0) {
+            alert('Tổng lương không được âm!');
+            e.preventDefault();
+            return;
+        }
+        
+        if (!confirm('Bạn có chắc chắn muốn cập nhật bảng lương này?')) {
+            e.preventDefault();
+            return;
+        }
+    });
+});
+
+function calculateTotal() {
+    var basicSalary = parseFloat($('#basic_salary').val()) || 0;
+    var allowance = parseFloat($('#allowance').val()) || 0;
+    var overtimePay = parseFloat($('#overtime_pay').val()) || 0;
+    var bonus = parseFloat($('#bonus').val()) || 0;
+    var deductions = parseFloat($('#deductions').val()) || 0;
+    
+    var total = basicSalary + allowance + overtimePay + bonus - deductions;
+    
+    $('#total_salary').val(total.toFixed(0));
+}
+</script>
+{% endblock %}

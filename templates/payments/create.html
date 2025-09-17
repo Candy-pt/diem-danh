@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo thanh toán mới - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Tạo thanh toán mới</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('payments.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Thông tin thanh toán
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="paymentForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="employee_id" class="form-label">Nhân viên <span class="text-danger">*</span></label>
+                            <select class="form-select" id="employee_id" name="employee_id" required>
+                                <option value="">Chọn nhân viên</option>
+                                {% for employee in employees %}
+                                <option value="{{ employee.id }}" data-salary="{{ employee.salary }}">
+                                    {{ employee.employee_id }} - {{ employee.first_name }} {{ employee.last_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="payroll_id" class="form-label">Bảng lương <span class="text-danger">*</span></label>
+                            <select class="form-select" id="payroll_id" name="payroll_id" required>
+                                <option value="">Chọn bảng lương</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="amount" class="form-label">Số tiền (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="amount" name="amount" 
+                                   min="0" step="1000" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="payment_date" class="form-label">Ngày thanh toán <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="payment_date" name="payment_date" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="payment_method" class="form-label">Phương thức thanh toán</label>
+                            <select class="form-select" id="payment_method" name="payment_method">
+                                <option value="bank_transfer">Chuyển khoản</option>
+                                <option value="cash">Tiền mặt</option>
+                                <option value="check">Séc</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="reference_number" class="form-label">Số tham chiếu</label>
+                            <input type="text" class="form-control" id="reference_number" name="reference_number" 
+                                   placeholder="Mã giao dịch, số séc...">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Ghi chú</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Ghi chú về thanh toán..."></textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="history.back()">
+                            <i class="fas fa-times me-1"></i>Hủy
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Tạo thanh toán
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Hướng dẫn
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-lightbulb me-1"></i>Lưu ý:</h6>
+                    <ul class="mb-0">
+                        <li>Chọn nhân viên cần thanh toán</li>
+                        <li>Chọn bảng lương tương ứng</li>
+                        <li>Nhập số tiền cần thanh toán</li>
+                        <li>Chọn ngày và phương thức thanh toán</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle me-1"></i>Quan trọng:</h6>
+                    <ul class="mb-0">
+                        <li>Số tiền không được vượt quá lương trong bảng lương</li>
+                        <li>Thanh toán sẽ được đánh dấu là "pending" ban đầu</li>
+                        <li>Có thể cập nhật trạng thái sau khi xác nhận</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Employee Info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>Thông tin nhân viên
+                </h5>
+            </div>
+            <div class="card-body" id="employeeInfo">
+                <p class="text-muted text-center">Chọn nhân viên để xem thông tin</p>
+            </div>
+        </div>
+        
+        <!-- Payroll Info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>Thông tin bảng lương
+                </h5>
+            </div>
+            <div class="card-body" id="payrollInfo">
+                <p class="text-muted text-center">Chọn bảng lương để xem chi tiết</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set current date as default payment date
+    var today = new Date().toISOString().split('T')[0];
+    $('#payment_date').val(today);
+    
+    // Employee selection handler
+    $('#employee_id').change(function() {
+        var employeeId = $(this).val();
+        if (employeeId) {
+            // Load payrolls for selected employee
+            loadPayrolls(employeeId);
+            
+            // Show employee info
+            var selectedOption = $(this).find('option:selected');
+            var employeeText = selectedOption.text();
+            var salary = selectedOption.data('salary');
+            
+            $('#employeeInfo').html(`
+                <div class="text-center mb-3">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-user fa-lg"></i>
+                    </div>
+                </div>
+                <h6 class="text-center">${employeeText}</h6>
+                <hr>
+                <div class="mb-2">
+                    <small class="text-muted">Lương cơ bản:</small><br>
+                    <span class="fw-bold">${salary.toLocaleString()} ₫</span>
+                </div>
+            `);
+        } else {
+            $('#payroll_id').html('<option value="">Chọn bảng lương</option>');
+            $('#employeeInfo').html('<p class="text-muted text-center">Chọn nhân viên để xem thông tin</p>');
+            $('#payrollInfo').html('<p class="text-muted text-center">Chọn bảng lương để xem chi tiết</p>');
+        }
+    });
+    
+    // Payroll selection handler
+    $('#payroll_id').change(function() {
+        var payrollId = $(this).val();
+        if (payrollId) {
+            // Load payroll details
+            loadPayrollDetails(payrollId);
+        } else {
+            $('#payrollInfo').html('<p class="text-muted text-center">Chọn bảng lương để xem chi tiết</p>');
+        }
+    });
+    
+    // Form validation
+    $('#paymentForm').on('submit', function(e) {
+        var amount = parseFloat($('#amount').val()) || 0;
+        var payrollId = $('#payroll_id').val();
+        
+        if (!payrollId) {
+            alert('Vui lòng chọn bảng lương!');
+            e.preventDefault();
+            return;
+        }
+        
+        if (amount <= 0) {
+            alert('Số tiền phải lớn hơn 0!');
+            e.preventDefault();
+            return;
+        }
+        
+        // Check if amount exceeds payroll total (if payroll is selected)
+        if (payrollId && window.selectedPayrollTotal) {
+            if (amount > window.selectedPayrollTotal) {
+                if (!confirm(`Số tiền (${amount.toLocaleString()} ₫) vượt quá tổng lương (${window.selectedPayrollTotal.toLocaleString()} ₫). Bạn có chắc chắn muốn tiếp tục?`)) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+        }
+        
+        if (!confirm('Bạn có chắc chắn muốn tạo thanh toán này?')) {
+            e.preventDefault();
+            return;
+        }
+    });
+});
+
+function loadPayrolls(employeeId) {
+    $.get(`/api/employee/${employeeId}/payrolls`, function(data) {
+        var options = '<option value="">Chọn bảng lương</option>';
+        data.forEach(function(payroll) {
+            options += `<option value="${payroll.id}" data-total="${payroll.total_salary}">
+                ${payroll.month}/${payroll.year} - ${payroll.total_salary.toLocaleString()} ₫
+            </option>`;
+        });
+        $('#payroll_id').html(options);
+    }).fail(function() {
+        $('#payroll_id').html('<option value="">Không có bảng lương</option>');
+    });
+}
+
+function loadPayrollDetails(payrollId) {
+    $.get(`/api/payroll/${payrollId}`, function(data) {
+        $('#payrollInfo').html(`
+            <div class="mb-2">
+                <small class="text-muted">Tháng/Năm:</small><br>
+                <span class="fw-bold">${data.month}/${data.year}</span>
+            </div>
+            <div class="mb-2">
+                <small class="text-muted">Lương cơ bản:</small><br>
+                <span>${data.basic_salary.toLocaleString()} ₫</span>
+            </div>
+            <div class="mb-2">
+                <small class="text-muted">Phụ cấp:</small><br>
+                <span>${data.allowance.toLocaleString()} ₫</span>
+            </div>
+            <div class="mb-2">
+                <small class="text-muted">Làm thêm:</small><br>
+                <span>${data.overtime_pay.toLocaleString()} ₫</span>
+            </div>
+            <hr>
+            <div class="mb-2">
+                <small class="text-muted">Tổng lương:</small><br>
+                <span class="fw-bold text-primary">${data.total_salary.toLocaleString()} ₫</span>
+            </div>
+        `);
+        window.selectedPayrollTotal = data.total_salary;
+    }).fail(function() {
+        $('#payrollInfo').html('<p class="text-danger">Không thể tải thông tin bảng lương</p>');
+    });
+}
+</script>
+{% endblock %}

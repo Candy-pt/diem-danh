@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}{{ employee.first_name }} {{ employee.last_name }} - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Thông tin nhân viên</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('employees.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại
+        </a>
+        <a href="{{ url_for('employees.edit', id=employee.id) }}" class="btn btn-warning ms-2">
+            <i class="fas fa-edit me-1"></i>Chỉnh sửa
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Employee Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>Thông tin cá nhân
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Mã nhân viên:</td>
+                                <td>{{ employee.employee_id }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Họ và tên:</td>
+                                <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Email:</td>
+                                <td>{{ employee.email }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Số điện thoại:</td>
+                                <td>{{ employee.phone or 'N/A' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Phòng ban:</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ employee.department.name if employee.department else '' }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Vị trí:</td>
+                                <td>
+                                    <span class="badge bg-info">{{ employee.position.title if employee.position else '' }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Ngày vào làm:</td>
+                                <td>{{ employee.hire_date.strftime('%d/%m/%Y') if employee.hire_date else 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Trạng thái:</td>
+                                <td>
+                                    {% if employee.is_active %}
+                                    <span class="badge bg-success">Đang làm việc</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Đã nghỉ</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if employee.address %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <label class="fw-bold">Địa chỉ:</label>
+                        <p class="mb-0">{{ employee.address }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Salary Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Thông tin lương
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4 class="text-primary">{{ "{:,}".format(employee.salary) }} ₫</h4>
+                            <small class="text-muted">Lương cơ bản</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4 class="text-success">{{ "{:,}".format(employee.allowance) }} ₫</h4>
+                            <small class="text-muted">Phụ cấp</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4 class="text-warning">{{ "{:,}".format(employee.salary + employee.allowance) }} ₫</h4>
+                            <small class="text-muted">Tổng thu nhập</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Work History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Lịch sử làm việc
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <h4 class="text-info">{{ employee.hire_date.strftime('%d/%m/%Y') if employee.hire_date else 'N/A' }}</h4>
+                            <small class="text-muted">Ngày bắt đầu</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            {% if employee.updated_at %}
+                            <h4 class="text-secondary">{{ employee.updated_at.strftime('%d/%m/%Y') }}</h4>
+                            <small class="text-muted">Cập nhật gần nhất</small>
+                            {% else %}
+                            <h4 class="text-secondary">N/A</h4>
+                            <small class="text-muted">Chưa cập nhật</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if employee.hire_date %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="text-center">
+                            {% set days_worked = 0 %}
+                            {% if employee.hire_date %}
+                                {% set days_worked = 365 %}
+                            {% endif %}
+                            <h5 class="text-success">{{ days_worked }} ngày</h5>
+                            <small class="text-muted">Thời gian làm việc</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Thao tác nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('employees.edit', id=employee.id) }}" class="btn btn-warning">
+                        <i class="fas fa-edit me-1"></i>Chỉnh sửa thông tin
+                    </a>
+                    <a href="{{ url_for('attendance.index') }}?employee_id={{ employee.id }}" class="btn btn-info">
+                        <i class="fas fa-clock me-1"></i>Xem chấm công
+                    </a>
+                    <a href="{{ url_for('payroll.index') }}?employee_id={{ employee.id }}" class="btn btn-success">
+                        <i class="fas fa-calculator me-1"></i>Xem bảng lương
+                    </a>
+                    <a href="{{ url_for('payments.index') }}?employee_id={{ employee.id }}" class="btn btn-primary">
+                        <i class="fas fa-money-bill-wave me-1"></i>Xem thanh toán
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Employee Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-check me-2"></i>Trạng thái
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    {% if employee.is_active %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <h6>Đang làm việc</h6>
+                        <small>Nhân viên đang hoạt động trong hệ thống</small>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle fa-2x mb-2"></i>
+                        <h6>Đã nghỉ việc</h6>
+                        <small>Nhân viên không còn hoạt động</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-address-book me-2"></i>Liên hệ
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="fw-bold">Email:</label>
+                    <p class="mb-1">{{ employee.email }}</p>
+                    <a href="mailto:{{ employee.email }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-envelope me-1"></i>Gửi email
+                    </a>
+                </div>
+                
+                {% if employee.phone %}
+                <div class="mb-3">
+                    <label class="fw-bold">Điện thoại:</label>
+                    <p class="mb-1">{{ employee.phone }}</p>
+                    <a href="tel:{{ employee.phone }}" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-phone me-1"></i>Gọi điện
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if employee.address %}
+                <div>
+                    <label class="fw-bold">Địa chỉ:</label>
+                    <p class="mb-1">{{ employee.address }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

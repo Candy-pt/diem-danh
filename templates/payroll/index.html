@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Bảng lương - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Quản lý Bảng lương</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('payroll.generate') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-calculator me-1"></i>Tính lương
+            </a>
+            <a href="{{ url_for('payroll.export_excel') }}" class="btn btn-sm btn-success">
+                <i class="fas fa-file-excel me-1"></i>Xuất Excel
+            </a>
+            <a href="{{ url_for('payroll.report') }}" class="btn btn-sm btn-info">
+                <i class="fas fa-chart-bar me-1"></i>Báo cáo
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tổng lương tháng</h5>
+                <p class="card-text text-primary fw-bold">{{ "{:,}".format(total_monthly_salary|default(0)) }} ₫</p>
+                <span class="badge bg-primary">{{ current_month }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Nhân viên được trả lương</h5>
+                <p class="card-text text-success fw-bold">{{ paid_employees|default(0) }} người</p>
+                <span class="badge bg-success">Đã thanh toán</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tổng giờ OT</h5>
+                <p class="card-text text-warning fw-bold">{{ total_overtime|default(0) }} giờ</p>
+                <span class="badge bg-warning">Tháng này</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tổng phụ cấp</h5>
+                <p class="card-text text-info fw-bold">{{ "{:,}".format(total_allowances|default(0)) }} ₫</p>
+                <span class="badge bg-info">Tháng này</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter and Search -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <select class="form-select" id="monthFilter">
+            <option value="01">Tháng 1</option>
+            <option value="02">Tháng 2</option>
+            <option value="03">Tháng 3</option>
+            <option value="04">Tháng 4</option>
+            <option value="05">Tháng 5</option>
+            <option value="06">Tháng 6</option>
+            <option value="07">Tháng 7</option>
+            <option value="08">Tháng 8</option>
+            <option value="09">Tháng 9</option>
+            <option value="10">Tháng 10</option>
+            <option value="11">Tháng 11</option>
+            <option value="12">Tháng 12</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="yearFilter">
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="statusFilter">
+            <option value="">Tất cả trạng thái</option>
+            <option value="calculated">Đã tính</option>
+            <option value="paid">Đã thanh toán</option>
+            <option value="pending">Chờ xử lý</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-primary w-100" onclick="filterPayroll()">
+            <i class="fas fa-filter me-1"></i>Lọc
+        </button>
+    </div>
+</div>
+
+<!-- Payroll Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="payrollTable">
+                <thead>
+                    <tr>
+                        <th>Tháng/Năm</th>
+                        <th>Nhân viên</th>
+                        <th>Lương cơ bản</th>
+                        <th>Giờ OT</th>
+                        <th>Phụ cấp</th>
+                        <th>Khấu trừ</th>
+                        <th>Thực lãnh</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payroll in payrolls %}
+                    <tr>
+                        <td>{{ payroll.month }}/{{ payroll.year }}</td>
+                        <td>{{ payroll.employee.first_name }} {{ payroll.employee.last_name }}</td>
+                                                 <td>{{ "{:,}".format(payroll.basic_salary) }} ₫</td>
+                         <td>{{ "%.1f"|format(payroll.overtime_hours) }}h ({{ "{:,}".format(payroll.overtime_pay) }} ₫)</td>
+                         <td>{{ "{:,}".format(payroll.allowance) }} ₫</td>
+                         <td>{{ "{:,}".format(payroll.deductions) }} ₫</td>
+                         <td class="fw-bold text-primary">{{ "{:,}".format(payroll.total_salary) }} ₫</td>
+                        <td>
+                            {% if payroll.status == 'calculated' %}
+                            <span class="badge bg-info">Đã tính</span>
+                            {% elif payroll.status == 'paid' %}
+                            <span class="badge bg-success">Đã thanh toán</span>
+                            {% elif payroll.status == 'pending' %}
+                            <span class="badge bg-warning">Chờ xử lý</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ payroll.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('payroll.show', id=payroll.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('payroll.edit', id=payroll.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="deletePayroll({{ payroll.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set current month and year as default
+    var now = new Date();
+    var currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    var currentYear = now.getFullYear();
+    
+    $('#monthFilter').val(currentMonth);
+    $('#yearFilter').val(currentYear);
+});
+
+function filterPayroll() {
+    var month = $('#monthFilter').val();
+    var year = $('#yearFilter').val();
+    var status = $('#statusFilter').val();
+    
+    // Redirect with filter parameters
+    var url = '{{ url_for("payroll.index") }}?';
+    if (month) url += 'month=' + month + '&';
+    if (year) url += 'year=' + year + '&';
+    if (status) url += 'status=' + status + '&';
+    
+    window.location.href = url;
+}
+
+function deletePayroll(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa bảng lương này?')) {
+        fetch(`/payroll/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Có lỗi xảy ra: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi xóa bảng lương');
+        });
+    }
+}
+</script>
+{% endblock %}

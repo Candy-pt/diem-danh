@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Thanh toán hàng loạt - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Thanh toán hàng loạt</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('payments.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Chọn bảng lương để thanh toán
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="bulkPaymentForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="payment_date" class="form-label">Ngày thanh toán <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="payment_date" name="payment_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="payment_method" class="form-label">Phương thức thanh toán <span class="text-danger">*</span></label>
+                            <select class="form-select" id="payment_method" name="payment_method" required>
+                                <option value="">Chọn phương thức</option>
+                                <option value="bank_transfer">Chuyển khoản</option>
+                                <option value="cash">Tiền mặt</option>
+                                <option value="check">Séc</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label">Chọn bảng lương cần thanh toán:</label>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">
+                                    <i class="fas fa-check-square me-1"></i>Chọn tất cả
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
+                                    <i class="fas fa-square me-1"></i>Bỏ chọn tất cả
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th width="50">
+                                            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                                        </th>
+                                        <th>Nhân viên</th>
+                                        <th>Tháng/Năm</th>
+                                        <th>Tổng lương</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payroll in pending_payrolls %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" name="payroll_ids" value="{{ payroll.id }}" 
+                                                   class="payroll-checkbox" onchange="updateSummary()">
+                                        </td>
+                                        <td>
+                                            <strong>{{ payroll.employee.employee_id }}</strong><br>
+                                            <small>{{ payroll.employee.first_name }} {{ payroll.employee.last_name }}</small>
+                                        </td>
+                                        <td>{{ payroll.month }}/{{ payroll.year }}</td>
+                                        <td class="fw-bold text-primary">{{ "{:,}".format(payroll.total_salary) }} ₫</td>
+                                        <td>
+                                            {% if payroll.status == 'approved' %}
+                                            <span class="badge bg-info">Đã duyệt</span>
+                                            {% elif payroll.status == 'calculated' %}
+                                            <span class="badge bg-warning">Đã tính</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">{{ payroll.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {% if not pending_payrolls %}
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Không có bảng lương nào đang chờ thanh toán
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="history.back()">
+                            <i class="fas fa-times me-1"></i>Hủy
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                            <i class="fas fa-money-bill-wave me-1"></i>Xử lý thanh toán
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Summary Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calculator me-2"></i>Tổng kết
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="fw-bold">Số bảng lương được chọn:</label>
+                    <p class="text-primary fw-bold" id="selectedCount">0</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Tổng số tiền:</label>
+                    <p class="text-success fw-bold" id="totalAmount">0 ₫</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="fw-bold">Trung bình mỗi nhân viên:</label>
+                    <p class="text-info fw-bold" id="averageAmount">0 ₫</p>
+                </div>
+                
+                <hr>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle me-1"></i>Lưu ý:</h6>
+                    <ul class="mb-0">
+                        <li>Tất cả bảng lương được chọn sẽ được thanh toán cùng lúc</li>
+                        <li>Trạng thái bảng lương sẽ được cập nhật thành "paid"</li>
+                        <li>Thanh toán sẽ được đánh dấu là "completed"</li>
+                        <li>Không thể hoàn tác sau khi xử lý</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Thao tác nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="selectApprovedOnly()">
+                        <i class="fas fa-check me-1"></i>Chọn đã duyệt
+                    </button>
+                    <button type="button" class="btn btn-outline-info" onclick="selectByDepartment()">
+                        <i class="fas fa-building me-1"></i>Chọn theo phòng ban
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="selectBySalaryRange()">
+                        <i class="fas fa-filter me-1"></i>Chọn theo mức lương
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set current date as default payment date
+    var today = new Date().toISOString().split('T')[0];
+    $('#payment_date').val(today);
+    
+    // Form validation
+    $('#bulkPaymentForm').on('submit', function(e) {
+        var selectedPayrolls = $('input[name="payroll_ids"]:checked').length;
+        var paymentMethod = $('#payment_method').val();
+        
+        if (selectedPayrolls === 0) {
+            alert('Vui lòng chọn ít nhất một bảng lương để thanh toán!');
+            e.preventDefault();
+            return;
+        }
+        
+        if (!paymentMethod) {
+            alert('Vui lòng chọn phương thức thanh toán!');
+            e.preventDefault();
+            return;
+        }
+        
+        var totalAmount = parseFloat($('#totalAmount').text().replace(/[^\d]/g, ''));
+        if (!confirm(`Bạn có chắc chắn muốn thanh toán ${selectedPayrolls} bảng lương với tổng số tiền ${totalAmount.toLocaleString()} ₫?`)) {
+            e.preventDefault();
+            return;
+        }
+    });
+});
+
+function selectAll() {
+    $('.payroll-checkbox').prop('checked', true);
+    $('#selectAllCheckbox').prop('checked', true);
+    updateSummary();
+}
+
+function deselectAll() {
+    $('.payroll-checkbox').prop('checked', false);
+    $('#selectAllCheckbox').prop('checked', false);
+    updateSummary();
+}
+
+function toggleSelectAll() {
+    var isChecked = $('#selectAllCheckbox').is(':checked');
+    $('.payroll-checkbox').prop('checked', isChecked);
+    updateSummary();
+}
+
+function updateSummary() {
+    var selectedCheckboxes = $('input[name="payroll_ids"]:checked');
+    var selectedCount = selectedCheckboxes.length;
+    var totalAmount = 0;
+    
+    selectedCheckboxes.each(function() {
+        var row = $(this).closest('tr');
+        var amountText = row.find('td:eq(3)').text();
+        var amount = parseFloat(amountText.replace(/[^\d]/g, ''));
+        totalAmount += amount;
+    });
+    
+    var averageAmount = selectedCount > 0 ? totalAmount / selectedCount : 0;
+    
+    $('#selectedCount').text(selectedCount);
+    $('#totalAmount').text(totalAmount.toLocaleString() + ' ₫');
+    $('#averageAmount').text(averageAmount.toLocaleString() + ' ₫');
+    
+    // Enable/disable submit button
+    $('#submitBtn').prop('disabled', selectedCount === 0);
+}
+
+function selectApprovedOnly() {
+    $('.payroll-checkbox').prop('checked', false);
+    $('tr').each(function() {
+        var statusText = $(this).find('td:eq(4)').text().trim();
+        if (statusText.includes('Đã duyệt')) {
+            $(this).find('.payroll-checkbox').prop('checked', true);
+        }
+    });
+    $('#selectAllCheckbox').prop('checked', false);
+    updateSummary();
+}
+
+function selectByDepartment() {
+    var department = prompt('Nhập tên phòng ban (VD: IT, HR, Sales):');
+    if (department) {
+        $('.payroll-checkbox').prop('checked', false);
+        $('tr').each(function() {
+            var employeeText = $(this).find('td:eq(1)').text().toLowerCase();
+            if (employeeText.includes(department.toLowerCase())) {
+                $(this).find('.payroll-checkbox').prop('checked', true);
+            }
+        });
+        $('#selectAllCheckbox').prop('checked', false);
+        updateSummary();
+    }
+}
+
+function selectBySalaryRange() {
+    var minSalary = prompt('Nhập mức lương tối thiểu (VNĐ):');
+    var maxSalary = prompt('Nhập mức lương tối đa (VNĐ):');
+    
+    if (minSalary && maxSalary) {
+        minSalary = parseFloat(minSalary.replace(/[^\d]/g, ''));
+        maxSalary = parseFloat(maxSalary.replace(/[^\d]/g, ''));
+        
+        $('.payroll-checkbox').prop('checked', false);
+        $('tr').each(function() {
+            var amountText = $(this).find('td:eq(3)').text();
+            var amount = parseFloat(amountText.replace(/[^\d]/g, ''));
+            
+            if (amount >= minSalary && amount <= maxSalary) {
+                $(this).find('.payroll-checkbox').prop('checked', true);
+            }
+        });
+        $('#selectAllCheckbox').prop('checked', false);
+        updateSummary();
+    }
+}
+
+// Update summary when checkboxes change
+$(document).on('change', '.payroll-checkbox', function() {
+    updateSummary();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Báo cáo Nhân sự - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Báo cáo Nhân sự</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('reports.export_excel') }}" class="btn btn-sm btn-success">
+                <i class="fas fa-file-excel me-1"></i>Xuất Excel
+            </a>
+            <a href="{{ url_for('reports.export_pdf') }}" class="btn btn-sm btn-danger">
+                <i class="fas fa-file-pdf me-1"></i>Xuất PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Department Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Phân bố nhân viên theo phòng ban
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="deptChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Thống kê nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ employees|length }}</h4>
+                        <small class="text-muted">Tổng nhân viên</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ employees|selectattr('is_active')|list|length }}</h4>
+                        <small class="text-muted">Đang làm việc</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ departments|length }}</h4>
+                        <small class="text-muted">Phòng ban</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">{{ "%.1f"|format(employees|selectattr('is_active')|map(attribute='salary')|list|sum / 1000000 / (employees|selectattr('is_active')|list|length or 1)) }}</h4>
+                        <small class="text-muted">Lương TB (triệu)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee List -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-users me-2"></i>Danh sách nhân viên
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Mã NV</th>
+                        <th>Họ và tên</th>
+                        <th>Email</th>
+                        <th>Vị trí</th>
+                        <th>Phòng ban</th>
+                        <th>Lương cơ bản</th>
+                        <th>Ngày vào làm</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>{{ employee.employee_id }}</td>
+                        <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                        <td>{{ employee.email }}</td>
+                        <td>{{ employee.position }}</td>
+                        <td>{{ employee.department }}</td>
+                        <td>{{ "{:,}".format(employee.salary) }} ₫</td>
+                        <td>{{ employee.hire_date.strftime('%d/%m/%Y') if employee.hire_date else 'N/A' }}</td>
+                        <td>
+                            {% if employee.is_active %}
+                            <span class="badge bg-success">Đang làm việc</span>
+                            {% else %}
+                            <span class="badge bg-danger">Đã nghỉ</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    initializeCharts();
+});
+
+function initializeCharts() {
+    // Department Distribution Chart
+    var deptCtx = document.getElementById('deptChart').getContext('2d');
+    var deptData = {
+        labels: [{% for dept in departments %}'{{ dept.name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for dept in departments %}{{ dept_stats.get(dept.name, 0) }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            ]
+        }]
+    };
+    
+    var deptChart = new Chart(deptCtx, {
+        type: 'doughnut',
+        data: deptData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

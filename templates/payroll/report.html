@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Báo cáo lương - Hệ thống Quản lý Nhân sự{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Báo cáo lương tháng {{ month }}/{{ year }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('payroll.export_excel') }}?month={{ month }}&year={{ year }}" class="btn btn-sm btn-success">
+                <i class="fas fa-file-excel me-1"></i>Xuất Excel
+            </a>
+            <a href="{{ url_for('payroll.index') }}" class="btn btn-sm btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tổng nhân viên</h5>
+                <p class="card-text text-primary fw-bold">{{ total_employees }} người</p>
+                <span class="badge bg-primary">Tháng {{ month }}/{{ year }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tổng lương</h5>
+                <p class="card-text text-success fw-bold">{{ "{:,}".format(total_salary) }} ₫</p>
+                <span class="badge bg-success">Đã tính</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Lương cơ bản</h5>
+                <p class="card-text text-info fw-bold">{{ "{:,}".format(total_basic_salary) }} ₫</p>
+                <span class="badge bg-info">Tổng cộng</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Phụ cấp</h5>
+                <p class="card-text text-warning fw-bold">{{ "{:,}".format(total_allowance) }} ₫</p>
+                <span class="badge bg-warning">Tổng cộng</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Phân bổ lương
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Thu nhập</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>Lương cơ bản:</td>
+                                <td class="text-end">{{ "{:,}".format(total_basic_salary) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td>Phụ cấp:</td>
+                                <td class="text-end">{{ "{:,}".format(total_allowance) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td>Lương làm thêm:</td>
+                                <td class="text-end">{{ "{:,}".format(total_overtime) }} ₫</td>
+                            </tr>
+                            <tr>
+                                <td>Thưởng:</td>
+                                <td class="text-end">{{ "{:,}".format(total_bonus) }} ₫</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-danger">Khấu trừ</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>Khấu trừ:</td>
+                                <td class="text-end">{{ "{:,}".format(total_deductions) }} ₫</td>
+                            </tr>
+                        </table>
+                        
+                        <hr>
+                        <h6 class="text-success">Tổng cộng</h6>
+                        <table class="table table-sm">
+                            <tr class="fw-bold">
+                                <td>Thực lãnh:</td>
+                                <td class="text-end text-success">{{ "{:,}".format(total_salary) }} ₫</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Thống kê trạng thái
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <div class="bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                            <i class="fas fa-clock fa-lg"></i>
+                        </div>
+                        <h6>Chờ xử lý</h6>
+                        <p class="text-warning fw-bold">{{ payrolls|selectattr('status', 'equalto', 'pending')|list|length }}</p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                            <i class="fas fa-check fa-lg"></i>
+                        </div>
+                        <h6>Đã duyệt</h6>
+                        <p class="text-info fw-bold">{{ payrolls|selectattr('status', 'equalto', 'approved')|list|length }}</p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                            <i class="fas fa-money-bill-wave fa-lg"></i>
+                        </div>
+                        <h6>Đã thanh toán</h6>
+                        <p class="text-success fw-bold">{{ payrolls|selectattr('status', 'equalto', 'paid')|list|length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payroll Details Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-table me-2"></i>Chi tiết bảng lương
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Nhân viên</th>
+                        <th>Phòng ban</th>
+                        <th>Lương cơ bản</th>
+                        <th>Phụ cấp</th>
+                        <th>Làm thêm</th>
+                        <th>Thưởng</th>
+                        <th>Khấu trừ</th>
+                        <th>Thực lãnh</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payroll in payrolls %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <strong>{{ payroll.employee.employee_id }}</strong><br>
+                            <small>{{ payroll.employee.first_name }} {{ payroll.employee.last_name }}</small>
+                        </td>
+                        <td>{{ payroll.employee.department.name }}</td>
+                        <td>{{ "{:,}".format(payroll.basic_salary) }} ₫</td>
+                        <td>{{ "{:,}".format(payroll.allowance) }} ₫</td>
+                        <td>{{ "{:,}".format(payroll.overtime_pay) }} ₫</td>
+                        <td>{{ "{:,}".format(payroll.bonus) }} ₫</td>
+                        <td>{{ "{:,}".format(payroll.deductions) }} ₫</td>
+                        <td class="fw-bold text-primary">{{ "{:,}".format(payroll.total_salary) }} ₫</td>
+                        <td>
+                            {% if payroll.status == 'pending' %}
+                            <span class="badge bg-warning">Chờ xử lý</span>
+                            {% elif payroll.status == 'approved' %}
+                            <span class="badge bg-info">Đã duyệt</span>
+                            {% elif payroll.status == 'paid' %}
+                            <span class="badge bg-success">Đã thanh toán</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ payroll.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('payroll.show', id=payroll.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('payroll.edit', id=payroll.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
