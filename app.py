@@ -1,27 +1,25 @@
+#!/usr/bin/env python3
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
-from flask_migrate import Migrate  # Thêm dòng này
+from flask_migrate import Migrate
 
-
+# Khởi tạo ứng dụng Flask
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "connect_args": {"ssl": {"fake_flag_to_enable_tls": True}}
 }
 
-
-# Import db from models to avoid circular import
-from models import db
-db.init_app(app)
-migrate = Migrate(app, db)  # Thêm dòng này sau khi db.init_app(app)
-
+# Khởi tạo SQLAlchemy và Migrate
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
+# Khởi tạo LoginManager
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
@@ -42,7 +40,7 @@ def format_currency(value):
     except (ValueError, TypeError):
         return "0 ₫"
 
-# Import routes after db initialization
+# Import routes sau khi khởi tạo db
 from routes import auth, employees, attendance, payroll, payments, reports
 
 # Register blueprints
@@ -59,8 +57,8 @@ def index():
     # Import models here to avoid circular import
     from models import Employee, Attendance, Payroll, Payment, Department
     
-    # Get current date info
-    now = datetime.now()
+    # Get current date info (Việt Nam time +07)
+    now = datetime.utcnow() + timedelta(hours=7)  # Múi giờ Việt Nam
     current_month = now.month
     current_year = now.year
     
@@ -96,7 +94,6 @@ def index():
     total_overtime_pay = sum(p.overtime_pay for p in current_month_payroll)
     
     # Payment statistics for current month
-    # Get payments for current month by checking payment_date
     current_month_payments = Payment.query.filter(
         db.extract('month', Payment.payment_date) == current_month,
         db.extract('year', Payment.payment_date) == current_year
@@ -190,6 +187,6 @@ def index():
                          monthly_trends=monthly_trends)
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    # Không cần db.create_all() tại đây, đã xử lý trong init_db.py
+    port = int(os.environ.get('PORT', 5000))  # Lấy port từ Railway hoặc dùng 5000 mặc định
+    app.run(host='0.0.0.0', port=port, debug=False)

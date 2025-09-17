@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-Script khởi tạo cơ sở dữ liệu và dữ liệu mẫu cho hệ thống quản lý nhân sự
+Script khởi tạo cơ sở dữ liệu và dữ liệu mẫu cho hệ thống quản lý nhân sự trên Railway
 """
 
 from app import app
 from models import db, User, Employee, Department, Position, Attendance, Payroll, Payment
 from werkzeug.security import generate_password_hash
 from datetime import datetime, date, timedelta
+import os
 import random
 
 def init_database():
     """Khởi tạo cơ sở dữ liệu"""
     with app.app_context():
-        # Tạo tất cả bảng
+        # Kiểm tra và tạo tất cả bảng
         db.create_all()
         print("✓ Đã tạo tất cả bảng trong cơ sở dữ liệu")
 
@@ -133,18 +134,18 @@ def create_sample_data():
 
         db.session.commit()
 
-        # Tạo attendance records cho tháng hiện tại
-        current_month = datetime.now().month
-        current_year = datetime.now().year
+        # Tạo attendance records cho tháng hiện tại (theo múi giờ +07)
+        current_time = datetime.utcnow().replace(tzinfo=None)  # Lấy giờ UTC
+        vietnam_offset = timedelta(hours=7)  # Múi giờ Việt Nam +07
+        vietnam_time = current_time + vietnam_offset
+        current_month = vietnam_time.month
+        current_year = vietnam_time.year
         
         for employee in Employee.query.all():
-            # Tạo attendance cho 20 ngày làm việc trong tháng
             for day in range(1, 21):
                 if day <= 20:  # Chỉ tạo cho 20 ngày đầu tháng
                     attendance_date = date(current_year, current_month, day)
-                    
-                    # Skip weekends (Saturday = 5, Sunday = 6)
-                    if attendance_date.weekday() < 5:
+                    if attendance_date.weekday() < 5:  # Skip weekends
                         check_in_time = datetime.combine(attendance_date, datetime.min.time().replace(hour=8, minute=random.randint(0, 30)))
                         check_out_time = datetime.combine(attendance_date, datetime.min.time().replace(hour=17, minute=random.randint(0, 30)))
                         
@@ -168,18 +169,25 @@ def create_sample_data():
         print("✓ Hoàn thành khởi tạo dữ liệu mẫu!")
 
 def main():
-    """Hàm chính"""
-    print("🚀 Bắt đầu khởi tạo hệ thống quản lý nhân sự...")
+    """Hàm chính chạy trên Railway"""
+    print("🚀 Bắt đầu khởi tạo hệ thống quản lý nhân sự trên Railway...")
     
     try:
+        # Cấu hình database URL từ Railway
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            "connect_args": {"ssl": {"fake_flag_to_enable_tls": True}}  # SSL cho Railway
+        }
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
         init_database()
         create_sample_data()
         print("\n🎉 Khởi tạo thành công!")
         print("\n📋 Thông tin đăng nhập:")
         print("   Username: admin")
         print("   Password: admin123")
-        print("\n🔗 Truy cập: http://localhost:5000")
-        
+        print("\n🔗 Truy cập ứng dụng tại URL do Railway cung cấp (xem trong tab Domains)")
+
     except Exception as e:
         print(f"❌ Lỗi: {str(e)}")
         with app.app_context():
