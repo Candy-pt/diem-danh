@@ -4,18 +4,20 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
-from config import Config
 from flask_migrate import Migrate  # Thêm dòng này
 
 
 app = Flask(__name__)
-app.config.from_object(Config)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
 
 
 # Import db from models to avoid circular import
 from models import db
 db.init_app(app)
 migrate = Migrate(app, db)  # Thêm dòng này sau khi db.init_app(app)
+
+db = SQLAlchemy(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
